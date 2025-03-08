@@ -1,6 +1,7 @@
 import sympy
 import sys
 import random
+from multiprocessing import Pool
 import time
 
 # Aumentando o limite de recursão para números grandes
@@ -22,27 +23,39 @@ def gerar_primos_aleatorios(digitos, limite_inferior=None, limite_superior=None)
         yield candidato
 
 # Função para encontrar pares de primos P e Q que satisfaçam P + Q + 1 = P'
-def encontrar_primos(digitos=500, limite=1):
+def verificar_par(p, q):
+    p_mais_q_mais_1 = p + q + 1
+    if sympy.isprime(p_mais_q_mais_1):
+        return (p, q, p_mais_q_mais_1)
+    return None
+
+def encontrar_primos(digitos=1000, limite=1):
     contador = 0
-    tentativas = 0
-    inicio = time.time()  # Inicia o temporizador
+    resultado = []
     
-    for p in gerar_primos_aleatorios(digitos):
-        for q in gerar_primos_aleatorios(digitos):
-            tentativas += 1
-            p_mais_q_mais_1 = p + q + 1
-            if sympy.isprime(p_mais_q_mais_1):
-                fim = time.time()  # Finaliza o temporizador
-                tempo_total = fim - inicio
-                
-                print(f'Encontrado: P = {p}, Q = {q}, P\' = {p_mais_q_mais_1}')
-                print(f'Tempo decorrido: {tempo_total:.2f} segundos')
-                print(f'Tentativas realizadas: {tentativas}')
+    # Usando multiprocessing para gerar primos e verificar a condição em paralelo
+    with Pool() as pool:
+        # Gerar primos P e Q em paralelo
+        primos_p = gerar_primos_aleatorios(digitos)
+        primos_q = gerar_primos_aleatorios(digitos)
+        
+        # Verificar as condições para pares de primos
+        for p, q in zip(primos_p, primos_q):
+            resultado_par = pool.apply(verificar_par, args=(p, q))
+            if resultado_par:
+                resultado.append(resultado_par)
                 contador += 1
                 if contador >= limite:
-                    return
+                    break
+    
+    # Exibir os resultados encontrados
+    for r in resultado:
+        print(f'Encontrado: P = {r[0]}, Q = {r[1]}, P\' = {r[2]}')
+    print(f'Encontrei {contador} pares de primos.')
 
-    print(f'Encontrei {contador} pares de primos após {tentativas} tentativas.')
+# Exemplo de execução
+start_time = time.time()
+encontrar_primos(digitos=1000, limite=1)
+end_time = time.time()
 
-# Modifique o número de dígitos para 1000 e defina o número máximo de pares a serem encontrados
-encontrar_primos(digitos=500, limite=1)
+print(f"Tempo total: {end_time - start_time:.2f} segundos")
